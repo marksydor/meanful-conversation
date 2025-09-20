@@ -9,6 +9,7 @@ from classes.ollama_connector import OllamaConnector
 from classes.openai_connector import OpenAIConnector
 from constants.default import USER_RESERVED_NAME
 from models.conversation_message import ConversationMessage
+from models.llm_tool import LLMTool
 
 load_dotenv(override=True)
 API_KEY = os.getenv('OPENAI_API_KEY')
@@ -17,46 +18,73 @@ ANTHROFIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
 # ConversationParticipant examples
 
-jack_prompt = (
-    "You are Jack, a far-left communist. You always argue for radical equality and "
-    "collective ownership. You dislike Lucy, who you see as a capitalist enemy. "
-    "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
-    "Never write '[Jack]' or other speaker labels. "
-    "Keep your answers short and to the point."
+# jack_prompt = (
+#     "You are Jack, a far-left communist. You always argue for radical equality and "
+#     "collective ownership. You dislike Lucy, who you see as a capitalist enemy. "
+#     "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
+#     "Never write '[Jack]' or other speaker labels. "
+#     "Keep your answers short and to the point."
+# )
+
+
+# lucy_prompt = (
+#     "You are Lucy, a centrist capitalist. You believe in free markets and moderate reforms. "
+#     "You often clash with Jack, whose communist views you find extreme. "
+#     "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
+#     "Never write '[Lucy]' or other speaker labels. "
+#     "Keep your answers short and to the point."
+# )
+
+# mike_prompt = (
+#     "You are Mike, a libertarian anarchist. You distrust both communism and capitalism. "
+#     "You mock Jack for wanting too much control and Lucy for defending the system. "
+#     "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
+#     "Never write '[Mike]' or other speaker labels. "
+#     "Keep your answers short and to the point."
+# )
+
+
+# jack_bot = OllamaConnector(system_prompt=jack_prompt)
+# lucy_bot = OllamaConnector(system_prompt=lucy_prompt)
+# mike_bot = OllamaConnector(system_prompt=mike_prompt)
+
+# jack_participant = ConversationParticipant(participant_id="1", name="Jack", llm_instance=jack_bot)
+# lucy_participant = ConversationParticipant(participant_id="2", name="Lucy", llm_instance=lucy_bot)
+# mike_participant = ConversationParticipant(participant_id="3", name="Mike", llm_instance=mike_bot)
+
+# participants = [jack_participant, lucy_participant, mike_participant]
+# participants = [lucy_participant]
+
+assistant_prompt = (
+    "You are an advanced AI assistant. You are helpful, creative, clever, and very friendly. "
+    "You always respond in a concise and clear manner. "
 )
 
+ollama_bot = OllamaConnector(system_prompt=assistant_prompt)
 
-lucy_prompt = (
-    "You are Lucy, a centrist capitalist. You believe in free markets and moderate reforms. "
-    "You often clash with Jack, whose communist views you find extreme. "
-    "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
-    "Never write '[Lucy]' or other speaker labels. "
-    "Keep your answers short and to the point."
-)
+def add_two_numbers(a, b):
+    try:
+        a = int(a)
+        b = int(b)
+    except (ValueError, TypeError):
+        raise ValueError("Both a and b must be convertible to integers.")
+    return a + b
 
+ollama_bot.add_tool(LLMTool(executer=add_two_numbers, name="add_two_numbers", description="Add two numbers together", parameters={
+    "type": "object",
+    "properties": {
+        "a": {"type": "integer", "description": "The first number"},
+        "b": {"type": "integer", "description": "The second number"},
+    },
+    "required": ["a", "b"],
+}))
 
-mike_prompt = (
-    "You are Mike, a libertarian anarchist. You distrust both communism and capitalism. "
-    "You mock Jack for wanting too much control and Lucy for defending the system. "
-    "Respond only as yourself, in the first person, without adding names, tags, or brackets. "
-    "Never write '[Mike]' or other speaker labels. "
-    "Keep your answers short and to the point."
-)
+assistant_participant = ConversationParticipant(participant_id="1", name="Assistant", llm_instance=ollama_bot)
 
-
-jack_bot = OllamaConnector(system_prompt=jack_prompt)
-lucy_bot = OllamaConnector(system_prompt=lucy_prompt)
-mike_bot = OllamaConnector(system_prompt=mike_prompt)
-
-jack_participant = ConversationParticipant(participant_id="1", name="Jack", llm_instance=jack_bot)
-lucy_participant = ConversationParticipant(participant_id="2", name="Lucy", llm_instance=lucy_bot)
-mike_participant = ConversationParticipant(participant_id="3", name="Mike", llm_instance=mike_bot)
-
-participants = [jack_participant, lucy_participant, mike_participant]
-
+participants = [assistant_participant]
 
 conversation = Conversation(participants=participants, messages=[
-    ConversationMessage(author=USER_RESERVED_NAME, content="Hey, Jack, Lucy, and Mike! I want to create new country, any ideas how to build it?"),
+    # ConversationMessage(author=USER_RESERVED_NAME, content="Hey, Jack, Lucy, and Mike! I want to create new country, any ideas how to build it?"),
 ])
 
 RESET = "\033[0m"
@@ -66,11 +94,52 @@ GREEN = "\033[32m"
 BLUE = "\033[34m"
 CYAN = "\033[36m"
 
-for i in range(10):
-    print(f"{BOLD}{CYAN}--- Round {i+1} ---{RESET}")
+
+# for i in range(200):
+#     # print(f"{BOLD}{CYAN}--- Round {i+1} ---{RESET}")
+#     break_round = True
+#     conversation.process_stream_conversation_round(print_output)
+#     user_input = input(f"\n{BOLD}{RED}You{RESET}: ")
+#     conversation.add_user_message(user_input)
+
+# user_input = input(f"{BOLD}{RED}You{RESET}: ")
+# conversation.add_user_message(user_input)
+
+# for i in range(2):
+#     print(f"{BOLD}{CYAN}--- Round {i+1} ---{RESET}")
+#     output = conversation.process_conversation_round().get_last_round_messages()
+#     for message in output:
+#         print(f"{BOLD}{GREEN}{message.author}{RESET}: {message.content}\n")
+    
+#     user_input = input(f"\n{BOLD}{RED}You{RESET}: ")
+#     conversation.add_user_message(user_input)    
+
+last_author = None
+break_round = False
+
+def print_output(chunk):
+    global last_author
+    global break_round
+    if chunk["author"] != last_author or break_round:
+        print(f"\n{BOLD}{GREEN}{chunk['author']}{RESET}: ", end="")
+        break_round = False
+    print(chunk["content"], end="", flush=True)
+    last_author = chunk["author"]
+
+user_input = input(f"{BOLD}{RED}You{RESET}: ")
+conversation.add_user_message(user_input)
+
+for i in range(200):
+    # print(f"{BOLD}{CYAN}--- Round {i+1} ---{RESET}")
+    break_round = True
+    conversation.process_stream_conversation_round(print_output)
+    user_input = input(f"\n{BOLD}{RED}You{RESET}: ")
+    conversation.add_user_message(user_input)
+
     output = conversation.process_conversation_round().get_last_round_messages()
     for message in output:
         print(f"{BOLD}{GREEN}{message.author}{RESET}: {message.content}\n")
+
 
 # messages = [
 #     {"role": "user", "content": "What is the capital of France?"},
