@@ -21,6 +21,21 @@ class Conversation:
         self.current_round += 1
         return self
     
+    def _event_handler_wrapper(self, event_handler, author):
+        if event_handler:
+            event_handler(author)
+        return
+
+    def process_stream_conversation_round(self, event_handler=None):
+        for i in range(len(self.participants)):
+            self.current_turn += 1
+            participant = self.participants[i]
+            message_content = participant.conversation(self.messages).stream().set_on_stream_event(lambda res: event_handler({"content": res, "author": participant.name})).run().get_result()
+            self.add_message(ConversationMessage(author=participant.name, content=message_content))
+
+        self.current_round += 1
+        return self
+    
     def get_last_round_messages(self) -> list[ConversationMessage]:
         if self.current_round == 0:
             return []
